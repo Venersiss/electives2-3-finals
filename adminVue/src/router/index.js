@@ -1,4 +1,4 @@
-import LogIn from '@/components/logIn.vue'
+import LogIn from '@/views/logIn.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
 
