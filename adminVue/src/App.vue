@@ -1,20 +1,10 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
+import logIn from './components/logIn.vue';
 </script>
 
 <template>
-  <v-app>
-    <v-main>
-      
-      <v-container>
-        <v-btn color="success">
-          Vuetify Test Button
-        </v-btn>
-      </v-container>
-
-    </v-main>
-  </v-app>
+  <RouterView />
 </template>
 
 <style scoped>
