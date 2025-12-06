@@ -1,16 +1,20 @@
 <template>
   <div class="login-page">
     <video playsinline autoplay muted loop id="bg-video">
-      <!-- Make sure this file path is correct -->
       <source src="/Pixel_Art_Dragon_Sunset_Scene.mp4" type="video/mp4">
       Your browser does not support the video tag.
     </video>
 
     <!-- Background Music -->
-    <audio autoplay loop>
+    <audio ref="bgMusic" loop>
       <source src="/background-music.mp3" type="audio/mpeg">
       Your browser does not support the audio element.
     </audio>
+
+    <!-- Music Toggle Button -->
+    <button class="music-toggle" @click="toggleMusic">
+      {{ isMusicPlaying ? '🔊' : '🔇' }}
+    </button>
 
     <div class="login-content">
       <!-- 1. The Game Logo Title -->
@@ -23,16 +27,18 @@
       <form @submit.prevent="login">
         <h2 class="form-header">ADVENTURER LOGIN</h2>
         
-        <!-- Added the little cursor | in placeholder to match reference -->
         <div class="input-group">
-          <input type="text" placeholder="USERNAME" required>
+          <input type="text" v-model="username" placeholder="USERNAME" required>
         </div>
         <div class="input-group">
-          <input type="password" placeholder="PASSWORD" required>
+          <input type="password" v-model="password" placeholder="PASSWORD" required>
         </div>
 
         <button type="submit">
-          <span class="sword-icon">🗡️</span> START GAME
+           🗡️ START GAME
+        </button>
+        <button type="submit">
+           📜 REGISTER
         </button>
       </form>
     </div>
@@ -43,12 +49,45 @@
 export default {
   data() {
     return {
-      message: "Hello World"
+      username: '',
+      password: '',
+      isMusicPlaying: false
     }
+  },
+  mounted() {
+    // Try to play music on mount (might be blocked by browser)
+    this.playMusic();
   },
   methods: {
     login() {
       console.log("Login submitted");
+      console.log("Username:", this.username);
+      console.log("Password:", this.password);
+      
+      // If music hasn't started, start it on login click
+      if (!this.isMusicPlaying) {
+        this.playMusic();
+      }
+    },
+    toggleMusic() {
+      const audio = this.$refs.bgMusic;
+      if (this.isMusicPlaying) {
+        audio.pause();
+        this.isMusicPlaying = false;
+      } else {
+        this.playMusic();
+      }
+    },
+    playMusic() {
+      const audio = this.$refs.bgMusic;
+      audio.play()
+        .then(() => {
+          this.isMusicPlaying = true;
+        })
+        .catch(error => {
+          console.log("Audio autoplay blocked:", error);
+          this.isMusicPlaying = false;
+        });
     }
   }
 }
@@ -94,6 +133,40 @@ html, body {
   z-index: 1;
 }
 
+/* Music Toggle Button */
+.music-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+  
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  
+  background-color: rgba(59, 45, 38, 0.9);
+  border: 3px solid #eebb4d;
+  
+  font-size: 24px;
+  cursor: pointer;
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  transition: all 0.3s;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+}
+
+.music-toggle:hover {
+  transform: scale(1.1);
+  background-color: rgba(59, 45, 38, 1);
+}
+
+.music-toggle:active {
+  transform: scale(0.95);
+}
+
 /* Main Content Container */
 .login-content {
   position: relative;
@@ -103,7 +176,7 @@ html, body {
   justify-content: center;
   align-items: center;
   height: 100%;
-  gap: 20px; /* Space between Logo and Box */
+  gap: 20px;
 }
 
 /* --- TITLE STYLES (The "Logo") --- */
@@ -116,11 +189,10 @@ html, body {
 .title-gold {
   font-family: 'Press Start 2P', cursive;
   font-size: 50px;
-  color: #ffcc00; /* Gold */
+  color: #ffcc00;
   margin: 0;
-  /* Thick black outline logic */
   text-shadow: 
-    4px 4px 0px #8b5a00, /* Darker Gold Shadow */
+    4px 4px 0px #8b5a00,
     -2px -2px 0 #000,  
     2px -2px 0 #000,
     -2px 2px 0 #000,
@@ -131,11 +203,10 @@ html, body {
 .title-blue {
   font-family: 'Press Start 2P', cursive;
   font-size: 50px;
-  color: #4dcfff; /* Cyan/Blue */
-  margin: -10px 0 0 0; /* Pull it up closer to QUEST */
-  /* Thick black outline logic */
+  color: #4dcfff;
+  margin: -10px 0 0 0;
   text-shadow: 
-    4px 4px 0px #005f87, /* Darker Blue Shadow */
+    4px 4px 0px #005f87,
     -2px -2px 0 #000,  
     2px -2px 0 #000,
     -2px 2px 0 #000,
@@ -150,18 +221,15 @@ form {
   align-items: center;
   gap: 15px;
   
-  /* The Main Brown Background */
   background-color: #3b2d26; 
   padding: 25px 35px;
   
-  /* The Golden Border */
   border: 4px solid #eebb4d;
   border-radius: 10px;
   
-  /* The Double Border Effect (Black inside Gold) */
   box-shadow: 
-    0 0 0 4px #1a1a1a, /* Black outline outside gold */
-    inset 0 0 0 4px #1a1a1a, /* Black outline inside gold */
+    0 0 0 4px #1a1a1a,
+    inset 0 0 0 4px #1a1a1a,
     0 10px 20px rgba(0,0,0,0.6);
     
   width: 400px;
@@ -188,9 +256,8 @@ input {
   width: 100%;
   padding: 12px 15px;
   
-  /* Dark Grey/Purpleish Background */
   background-color: #24242e; 
-  border: 4px solid #15151b; /* Inset look */
+  border: 4px solid #15151b;
   border-radius: 6px;
   
   color: #a0a0b0;
@@ -207,34 +274,32 @@ input::placeholder {
 
 input:focus {
   background-color: #2e2e3a;
-  border-color: #eebb4d; /* Gold highlight on focus */
+  border-color: #eebb4d;
   color: #fff;
 }
 
 /* --- BUTTON STYLES --- */
-button {
+form button {
   width: 100%;
   padding: 12px 10px;
   margin-top: 10px;
   
-  /* Stone Blue Gradient */
   background-color: #7b85a1;
   color: white;
   
-  font-family: 'Press Start 2P', cursive; /* Blocky font for button */
-  font-size: 16px; /* Smaller size for this specific font */
+  font-family: 'Press Start 2P', cursive;
+  font-size: 16px;
   text-transform: uppercase;
   cursor: pointer;
   
-  /* The 3D Stone Button Border */
   border: none;
-  border-top: 4px solid #9fa9c2;    /* Light highlight top */
-  border-left: 4px solid #9fa9c2;   /* Light highlight left */
-  border-bottom: 4px solid #4a5061; /* Dark shadow bottom */
-  border-right: 4px solid #4a5061;  /* Dark shadow right */
+  border-top: 4px solid #9fa9c2;
+  border-left: 4px solid #9fa9c2;
+  border-bottom: 4px solid #4a5061;
+  border-right: 4px solid #4a5061;
   
   border-radius: 6px;
-  box-shadow: 0 4px 0 #2a2e38; /* Extra depth shadow below button */
+  box-shadow: 0 4px 0 #2a2e38;
   
   display: flex;
   align-items: center;
@@ -243,18 +308,15 @@ button {
   text-shadow: 2px 2px #000;
 }
 
-button:active {
-  transform: translate(0, 4px); /* Pushes down */
-  box-shadow: 0 0 0 #2a2e38; /* Removes shadow */
+form button:active {
+  transform: translate(0, 4px);
+  box-shadow: 0 0 0 #2a2e38;
   border-bottom: 4px solid transparent;
 }
 
-button:hover {
+form button:hover {
   background-color: #8a94b0;
 }
 
-.sword-icon {
-  font-size: 20px;
-  filter: drop-shadow(2px 2px 0 #000);
-}
+
 </style>
