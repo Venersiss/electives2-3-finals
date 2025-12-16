@@ -36,4 +36,3 @@ coverage
 __screenshots__/
 
 # Exclude public folder (images, audio, videos)
-public/

@@ -34,40 +34,117 @@
           <input type="password" v-model="password" placeholder="PASSWORD" required>
         </div>
 
-        <button type="submit">
-           🗡️ START GAME
+        <button type="submit" :disabled="isLoading">
+           {{ isLoading ? '⏳ LOADING...' : '🗡️ START GAME' }}
         </button>
-        <button type="submit">
+        <button type="button" @click="goRegister">
            📜 REGISTER
         </button>
+
+        <div v-if="errorMessage" class="error-message">
+          {{ errorMessage }}
+        </div>
       </form>
     </div>
   </div>
 </template>
 
 <script>
+import { supabase } from '../library/supabase.js';
+import { isoWithOffset } from '../library/time.js';
+
 export default {
   data() {
     return {
       username: '',
       password: '',
-      isMusicPlaying: false
+      isMusicPlaying: false,
+      isLoading: false,
+      errorMessage: ''
     }
   },
   mounted() {
-    // Try to play music on mount (might be blocked by browser)
-    this.playMusic();
+    // Play music after user interaction
+    document.addEventListener('click', () => this.playMusic(), { once: true });
   },
   methods: {
-    login() {
-      console.log("Login submitted");
-      console.log("Username:", this.username);
-      console.log("Password:", this.password);
-      
-      // If music hasn't started, start it on login click
-      if (!this.isMusicPlaying) {
-        this.playMusic();
+    async login() {
+      this.errorMessage = '';
+      this.isLoading = true;
+
+      try {
+        // Validate input
+        if (!this.username || !this.password) {
+          this.errorMessage = 'Please enter username and password!';
+          this.isLoading = false;
+          return;
+        }
+
+        // Query Supabase for matching credentials
+        const { data, error } = await supabase
+          .from('Credentials')
+          .select('id, username')
+          .eq('username', this.username)
+          .eq('password', this.password)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Query error:', error);
+          this.errorMessage = 'Invalid username or password!';
+        } else if (data) {
+          // Login successful - store username and update lastActive in userInfo
+          localStorage.setItem('currentUser', this.username);
+          console.log('Login successful:', data);
+
+          // Update user's lastActive timestamp in userInfo (insert if missing)
+          try {
+            const now = isoWithOffset(8);
+
+            // Check for existing userInfo row
+            const { data: uiRow, error: uiSelectErr } = await supabase
+              .from('userInfo')
+              .select('id')
+              .eq('userId', data.id)
+              .maybeSingle();
+
+            if (uiSelectErr) {
+              console.warn('userInfo lookup error:', uiSelectErr);
+            }
+
+            if (uiRow && uiRow.id) {
+              const { error: uiUpdateErr } = await supabase
+                .from('userInfo')
+                .update({ lastActive: now, updatedAt: now, isActive: true })
+                .eq('userId', data.id);
+
+              if (uiUpdateErr) console.warn('Failed to update userInfo.lastActive/isActive:', uiUpdateErr);
+            } else {
+              const { error: uiInsertErr } = await supabase
+                .from('userInfo')
+                .insert({ userId: data.id, lastActive: now, updatedAt: now, isActive: true });
+
+              if (uiInsertErr) console.warn('Failed to insert userInfo row:', uiInsertErr);
+            }
+          } catch (innerErr) {
+            console.error('Error updating userInfo lastActive:', innerErr);
+          }
+
+          // Redirect to map page after 1 second
+          setTimeout(() => {
+            this.$router.push('/map');
+          }, 1000);
+        } else {
+          this.errorMessage = 'Invalid username or password!';
+        }
+      } catch (error) {
+        this.errorMessage = `Error: ${error.message}`;
+        console.error('Unexpected error:', error);
+      } finally {
+        this.isLoading = false;
       }
+    },
+    goRegister() {
+      this.$router.push('/register');
     },
     toggleMusic() {
       const audio = this.$refs.bgMusic;
@@ -93,19 +170,11 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 /* 1. IMPORTS: Press Start 2P for Title, VT323 for Inputs */
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
 
-/* GLOBAL RESET */
-html, body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
+/* SCOPED RESET FOR LOGIN PAGE */
 * {
   box-sizing: border-box;
 }
@@ -117,6 +186,9 @@ html, body {
   left: 0;
   width: 100vw;
   height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 /* Background Video */
@@ -188,30 +260,30 @@ html, body {
 
 .title-gold {
   font-family: 'Press Start 2P', cursive;
-  font-size: 50px;
+  font-size: 36px;
   color: #ffcc00;
   margin: 0;
   text-shadow: 
-    4px 4px 0px #8b5a00,
+    3px 3px 0px #8b5a00,
     -2px -2px 0 #000,  
     2px -2px 0 #000,
     -2px 2px 0 #000,
     2px 2px 0 #000,
-    4px 4px 0 #000;
+    3px 3px 0 #000;
 }
 
 .title-blue {
   font-family: 'Press Start 2P', cursive;
-  font-size: 50px;
+  font-size: 36px;
   color: #4dcfff;
-  margin: -10px 0 0 0;
+  margin: -5px 0 0 0;
   text-shadow: 
-    4px 4px 0px #005f87,
+    3px 3px 0px #005f87,
     -2px -2px 0 #000,  
     2px -2px 0 #000,
     -2px 2px 0 #000,
     2px 2px 0 #000,
-    4px 4px 0 #000;
+    3px 3px 0 #000;
 }
 
 /* --- FORM BOX STYLES --- */
@@ -219,10 +291,10 @@ form {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
+  gap: 12px;
   
   background-color: #3b2d26; 
-  padding: 25px 35px;
+  padding: 20px 30px;
   
   border: 4px solid #eebb4d;
   border-radius: 10px;
@@ -232,14 +304,16 @@ form {
     inset 0 0 0 4px #1a1a1a,
     0 10px 20px rgba(0,0,0,0.6);
     
-  width: 400px;
+  width: 100%;
+  max-width: 380px;
+  margin: 0 20px;
 }
 
 .form-header {
   font-family: 'VT323', monospace;
-  font-size: 32px;
+  font-size: 24px;
   color: #ffffff;
-  margin: 0 0 5px 0;
+  margin: 0 0 3px 0;
   text-transform: uppercase;
   letter-spacing: 1px;
   text-shadow: 2px 2px #000;
@@ -254,7 +328,7 @@ form {
 
 input {
   width: 100%;
-  padding: 12px 15px;
+  padding: 10px 12px;
   
   background-color: #24242e; 
   border: 4px solid #15151b;
@@ -262,7 +336,7 @@ input {
   
   color: #a0a0b0;
   font-family: 'VT323', monospace;
-  font-size: 26px;
+  font-size: 18px;
   outline: none;
   text-transform: uppercase;
   box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
@@ -281,14 +355,14 @@ input:focus {
 /* --- BUTTON STYLES --- */
 form button {
   width: 100%;
-  padding: 12px 10px;
-  margin-top: 10px;
+  padding: 10px 8px;
+  margin-top: 5px;
   
   background-color: #7b85a1;
   color: white;
   
   font-family: 'Press Start 2P', cursive;
-  font-size: 16px;
+  font-size: 13px;
   text-transform: uppercase;
   cursor: pointer;
   
@@ -304,7 +378,7 @@ form button {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   text-shadow: 2px 2px #000;
 }
 
@@ -314,8 +388,27 @@ form button:active {
   border-bottom: 4px solid transparent;
 }
 
-form button:hover {
+form button:hover:not(:disabled) {
   background-color: #8a94b0;
+}
+
+form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* --- MESSAGE STYLES --- */
+.error-message {
+  width: 100%;
+  padding: 12px;
+  background-color: rgba(255, 0, 0, 0.2);
+  border: 2px solid #ff4444;
+  border-radius: 6px;
+  color: #ff8888;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  text-align: center;
+  margin-top: 10px;
 }
 
 
