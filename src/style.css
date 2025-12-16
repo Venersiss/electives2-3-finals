@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  @apply bg-gradient-to-br from-slate-900 to-slate-800;
+}
+
+/* Pixel-style elements */
+.pixel-btn {
+  @apply px-4 py-2 bg-pixel-gold text-black font-bold rounded border-2 border-black hover:shadow-lg transition-all;
+}
+
+.pixel-btn-secondary {
+  @apply px-4 py-2 bg-slate-600 text-white font-bold rounded border-2 border-slate-700 hover:shadow-lg transition-all;
+}
+
+.pixel-card {
+  @apply bg-slate-800 border-2 border-slate-700 rounded-lg p-6 shadow-lg;
+}
+
+.pixel-input {
+  @apply bg-slate-700 text-white border-2 border-slate-600 rounded px-4 py-2 focus:border-pixel-gold focus:outline-none;
+}
+
+.pixel-textarea {
+  @apply bg-slate-700 text-white border-2 border-slate-600 rounded px-4 py-2 focus:border-pixel-gold focus:outline-none font-mono text-sm;
+}
+
+.pixel-select {
+  @apply bg-slate-700 text-white border-2 border-slate-600 rounded px-4 py-2 focus:border-pixel-gold focus:outline-none;
+}
