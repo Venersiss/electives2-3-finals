@@ -157,9 +157,10 @@ export default {
       }
 
       this.loading = true
+      const messageText = this.newMessage.trim()
 
       try {
-        console.log('📤 Sending message:', this.newMessage)
+        console.log('📤 Sending message:', messageText)
 
         const { data, error } = await supabase
           .from('chat_messages')
@@ -167,7 +168,7 @@ export default {
             {
               username: this.currentUsername,
               user_id: this.currentUserId,
-              message: this.newMessage.trim(),
+              message: messageText,
               created_at: isoWithOffset()
             }
           ])
@@ -180,6 +181,13 @@ export default {
         }
 
         console.log('✓ Message sent successfully')
+        
+        // Add the message to the local array immediately so it appears right away
+        if (data && data.length > 0) {
+          this.messages.push(data[0])
+          this.scrollToBottom()
+        }
+        
         this.newMessage = ''
       } catch (err) {
         console.error('❌ Exception in sendMessage:', err)

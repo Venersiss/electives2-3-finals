@@ -1403,6 +1403,24 @@ export default {
       }
 
       try {
+        const selectedItem = this.userInventory[this.sellForm.selectedItemIndex]
+        
+        console.log('🔍 Checking if item is equipped before listing...')
+        console.log('Selected item details:', { 
+          name: selectedItem.name, 
+          table: selectedItem.table, 
+          id: selectedItem.id 
+        })
+        
+        // Re-check if item is equipped (in case it was equipped after selection)
+        const isEquipped = await this.isInventoryItemEquipped(selectedItem.table, selectedItem.id)
+        console.log('Is item equipped?', isEquipped)
+        
+        if (isEquipped) {
+          alert('❌ You cannot sell an item that is currently equipped!\nUnequip it first.')
+          return
+        }
+        
         // Get user ID
         const { data: credData, error: credError } = await supabase
           .from('Credentials')
@@ -1417,7 +1435,6 @@ export default {
         }
         
         const userId = credData?.id
-        const selectedItem = this.userInventory[this.sellForm.selectedItemIndex]
         
         // Determine the correct table and column based on item type
         let shopTableName = ''
@@ -1567,9 +1584,52 @@ export default {
         
         console.log('✅ New item row created in gear table successfully')
         
-        // Step 2: Delete the item from inventory table
+        // Step 2: Unequip the item if it's currently equipped
+        if (selectedItem.table === 'headinv') {
+          console.log('Step 2a: Unequipping head item if equipped...')
+          const { error: unequipError } = await supabase
+            .from('Equipped')
+            .update({ headEquipped: null })
+            .eq('headEquipped', selectedItem.id)
+          
+          if (unequipError) {
+            console.warn('Warning unequipping head item:', unequipError)
+          }
+        } else if (selectedItem.table === 'bodyinv') {
+          console.log('Step 2a: Unequipping body item if equipped...')
+          const { error: unequipError } = await supabase
+            .from('Equipped')
+            .update({ bodyEquipped: null })
+            .eq('bodyEquipped', selectedItem.id)
+          
+          if (unequipError) {
+            console.warn('Warning unequipping body item:', unequipError)
+          }
+        } else if (selectedItem.table === 'footinv') {
+          console.log('Step 2a: Unequipping foot item if equipped...')
+          const { error: unequipError } = await supabase
+            .from('Equipped')
+            .update({ footEquipped: null })
+            .eq('footEquipped', selectedItem.id)
+          
+          if (unequipError) {
+            console.warn('Warning unequipping foot item:', unequipError)
+          }
+        } else if (selectedItem.table === 'weaponinv') {
+          console.log('Step 2a: Unequipping weapon item if equipped...')
+          const { error: unequipError } = await supabase
+            .from('Equipped')
+            .update({ weaponEquipped: null })
+            .eq('weaponEquipped', selectedItem.id)
+          
+          if (unequipError) {
+            console.warn('Warning unequipping weapon item:', unequipError)
+          }
+        }
+        
+        // Step 3: Delete the item from inventory table
         if (rowIdToDelete) {
-          console.log('Step 2: Deleting item with ID:', rowIdToDelete, 'from', invTableName)
+          console.log('Step 3: Deleting item with ID:', rowIdToDelete, 'from', invTableName)
           
           const { error: deleteError } = await supabase
             .from(invTableName)
@@ -3054,7 +3114,10 @@ export default {
           .eq('username', this.currentUsername)
           .single()
         
-        if (!credData) return false
+        if (!credData) {
+          console.log('❌ No credential data found')
+          return false
+        }
         
         const credentialId = credData.id
         
@@ -3065,7 +3128,10 @@ export default {
           .eq('userId', credentialId)
           .single()
         
-        if (!userInfoData) return false
+        if (!userInfoData) {
+          console.log('❌ No userInfo found')
+          return false
+        }
         
         const userInfoId = userInfoData.id
         
@@ -3073,22 +3139,40 @@ export default {
         // We need to match by BOTH table AND id since each table has its own ID sequence
         const { data: equippedRow } = await supabase
           .from('Equipped')
-          .select('headEquipped, bodyEquipped, footEquipped, weaponEquipped, headTable, bodyTable, footTable, weaponTable')
+          .select('headEquipped, bodyEquipped, footEquipped, weaponEquipped')
           .eq('userId', userInfoId)
           .single()
         
-        if (!equippedRow) return false
+        if (!equippedRow) {
+          console.log('❌ No equipped row found')
+          return false
+        }
         
-        console.log('Checking if item equipped - table:', inventoryTable, 'id:', inventoryItemId)
-        console.log('Equipped data:', equippedRow)
+        console.log('📊 Checking if item equipped:')
+        console.log('  Looking for - Table:', inventoryTable, 'ID:', inventoryItemId)
+        console.log('  Equipped data:', equippedRow)
         
-        // Check if the item matches any equipped slot (by both table and ID)
-        return (
-          (equippedRow.headTable === inventoryTable && equippedRow.headEquipped === inventoryItemId) ||
-          (equippedRow.bodyTable === inventoryTable && equippedRow.bodyEquipped === inventoryItemId) ||
-          (equippedRow.footTable === inventoryTable && equippedRow.footEquipped === inventoryItemId) ||
-          equippedRow.weaponEquipped === inventoryItemId
-        )
+        // Check if the item matches any equipped slot by ID only
+        // The equipped slot contains the ID of the item from the inventory table
+        if (inventoryTable === 'headinv' && equippedRow.headEquipped === inventoryItemId) {
+          console.log('  ✅ Item is equipped as HEAD')
+          return true
+        }
+        if (inventoryTable === 'bodyinv' && equippedRow.bodyEquipped === inventoryItemId) {
+          console.log('  ✅ Item is equipped as BODY')
+          return true
+        }
+        if (inventoryTable === 'footinv' && equippedRow.footEquipped === inventoryItemId) {
+          console.log('  ✅ Item is equipped as FOOT')
+          return true
+        }
+        if (inventoryTable === 'weaponinv' && equippedRow.weaponEquipped === inventoryItemId) {
+          console.log('  ✅ Item is equipped as WEAPON')
+          return true
+        }
+        
+        console.log('  ❌ Item is not equipped')
+        return false
       } catch (err) {
         console.error('Error checking if item is equipped:', err)
         return false
